@@ -1,0 +1,376 @@
+:root {
+  --bg: #f6efe6;
+  --paper: rgba(255, 248, 241, 0.78);
+  --panel: rgba(255, 250, 244, 0.88);
+  --ink: #231815;
+  --muted: #6a544a;
+  --accent: #cb5c33;
+  --accent-dark: #8f3413;
+  --sea: #0b7b77;
+  --line: rgba(35, 24, 21, 0.1);
+  --shadow: 0 24px 60px rgba(61, 34, 20, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(203, 92, 51, 0.18), transparent 28%),
+    radial-gradient(circle at 85% 15%, rgba(11, 123, 119, 0.15), transparent 24%),
+    linear-gradient(180deg, #fdf6ee 0%, #f5e7d8 100%);
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page-shell {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 1rem 0 3rem;
+}
+
+.hero,
+.panel,
+.feature-strip article,
+.cards-grid article {
+  backdrop-filter: blur(16px);
+}
+
+.hero {
+  background: var(--paper);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 32px;
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+}
+
+.topbar,
+.hero-grid,
+.feature-strip,
+.content-grid,
+.forms-layout {
+  display: grid;
+}
+
+.topbar {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.brand-mark {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), #f09a62);
+  color: #fff9f4;
+  font-weight: 700;
+}
+
+.brand-name,
+.nav-links {
+  font-weight: 600;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  color: var(--muted);
+}
+
+.hero-grid {
+  grid-template-columns: 1.4fr 0.9fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.78rem;
+  color: var(--accent-dark);
+  margin: 0 0 0.8rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: "DM Serif Display", serif;
+  line-height: 1;
+}
+
+h1 {
+  font-size: clamp(3rem, 7vw, 5.8rem);
+  max-width: 10ch;
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+.hero-text,
+.feature-strip p,
+.section-heading,
+.cards-grid p,
+label,
+.status-message {
+  color: var(--muted);
+}
+
+.hero-text {
+  max-width: 60ch;
+  font-size: 1.08rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.95rem 1.35rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button-primary {
+  background: var(--accent);
+  color: #fff8f0;
+  box-shadow: 0 16px 32px rgba(203, 92, 51, 0.22);
+}
+
+.button-secondary {
+  background: var(--sea);
+  color: #effffb;
+  box-shadow: 0 16px 32px rgba(11, 123, 119, 0.22);
+}
+
+.hero-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.hero-card,
+.feature-strip article,
+.cards-grid article,
+.panel {
+  background: var(--panel);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.hero-card {
+  padding: 1.5rem;
+}
+
+.hero-card.accent {
+  background: linear-gradient(140deg, rgba(11, 123, 119, 0.16), rgba(255, 250, 244, 0.9));
+}
+
+.stat-label {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+.stat-number {
+  margin: 0.4rem 0;
+  font-family: "DM Serif Display", serif;
+  font-size: 4rem;
+}
+
+.stat-note {
+  margin: 0;
+  max-width: 24ch;
+}
+
+.feature-strip {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: 1.4rem 0 3rem;
+}
+
+.feature-strip article,
+.cards-grid article,
+.panel {
+  padding: 1.3rem;
+}
+
+.content-grid,
+.publish-section {
+  margin-top: 2.2rem;
+}
+
+.section-heading {
+  margin-bottom: 1rem;
+}
+
+.cards-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.cards-grid article {
+  position: relative;
+  overflow: hidden;
+}
+
+.cards-grid article::after {
+  content: "";
+  position: absolute;
+  inset: auto -2rem -2rem auto;
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  background: rgba(203, 92, 51, 0.08);
+}
+
+.roommate-grid article::after {
+  background: rgba(11, 123, 119, 0.1);
+}
+
+.card-topline,
+.meta-row,
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.card-topline {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price {
+  font-size: 1.9rem;
+  font-family: "DM Serif Display", serif;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  background: rgba(35, 24, 21, 0.06);
+}
+
+.pill.accent {
+  background: rgba(203, 92, 51, 0.14);
+  color: var(--accent-dark);
+}
+
+.pill.sea {
+  background: rgba(11, 123, 119, 0.14);
+  color: #085d5a;
+}
+
+.meta-row {
+  margin: 0.85rem 0;
+  color: var(--ink);
+}
+
+.tag-row {
+  margin-top: 1rem;
+}
+
+.forms-layout {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.form-card {
+  display: grid;
+  gap: 0.8rem;
+}
+
+label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+}
+
+input,
+textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.85rem 0.9rem;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 7rem;
+}
+
+.status-message {
+  min-height: 1.5rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 920px) {
+  .hero-grid,
+  .feature-strip,
+  .cards-grid,
+  .forms-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    max-width: 12ch;
+  }
+}

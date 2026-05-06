@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DormMate | Dorm Rentals & Roommates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <nav class="topbar">
+        <div class="brand">
+          <span class="brand-mark">DM</span>
+          <span class="brand-name">DormMate</span>
+        </div>
+        <div class="nav-links">
+          <a href="#listings">Dorms</a>
+          <a href="#roommates">Roommates</a>
+          <a href="#publish">Post</a>
+        </div>
+      </nav>
+
+      <div class="hero-grid">
+        <section class="hero-copy">
+          <p class="eyebrow">Student housing made social</p>
+          <h1>Find a dorm, a room, or the right roommate in one place.</h1>
+          <p class="hero-text">
+            DormMate helps students compare nearby stays, post their own housing options,
+            and connect with compatible roommates before move-in week gets chaotic.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#listings">Browse dorms</a>
+            <a class="button button-secondary" href="#publish">Post a listing</a>
+          </div>
+        </section>
+
+        <aside class="hero-panel">
+          <div class="hero-card">
+            <p class="stat-label">Active options</p>
+            <p class="stat-number" id="listingCount">0</p>
+            <p class="stat-note">Dorms and shared rooms near campus</p>
+          </div>
+          <div class="hero-card accent">
+            <p class="stat-label">Roommate seekers</p>
+            <p class="stat-number" id="roommateCount">0</p>
+            <p class="stat-note">Profiles looking for a good match</p>
+          </div>
+        </aside>
+      </div>
+    </header>
+
+    <main>
+      <section class="feature-strip">
+        <article>
+          <h2>Compare by budget</h2>
+          <p>See rent, beds, campus distance, and amenities without leaving the page.</p>
+        </article>
+        <article>
+          <h2>Match lifestyle</h2>
+          <p>Find people who actually fit your schedule, noise level, and routines.</p>
+        </article>
+        <article>
+          <h2>Post instantly</h2>
+          <p>Add a dorm or roommate post through the site with no admin panel required.</p>
+        </article>
+      </section>
+
+      <section class="content-grid" id="listings">
+        <div class="section-heading">
+          <p class="eyebrow">Dorm Rentals</p>
+          <h2>Places students can move into fast</h2>
+        </div>
+        <div class="cards-grid" id="listingGrid"></div>
+      </section>
+
+      <section class="content-grid" id="roommates">
+        <div class="section-heading">
+          <p class="eyebrow">Roommate Board</p>
+          <h2>People looking for their next flatmate</h2>
+        </div>
+        <div class="cards-grid roommate-grid" id="roommateGrid"></div>
+      </section>
+
+      <section class="publish-section" id="publish">
+        <div class="section-heading">
+          <p class="eyebrow">Publish</p>
+          <h2>Add a dorm listing or a roommate request</h2>
+        </div>
+
+        <div class="forms-layout">
+          <form class="panel form-card" id="listingForm">
+            <h3>Post a dorm</h3>
+            <label>Title <input name="title" placeholder="Cozy shared apartment" required></label>
+            <label>Campus area <input name="campus" placeholder="Near AUB" required></label>
+            <label>Monthly rent <input name="price" type="number" min="1" placeholder="300" required></label>
+            <label>Beds <input name="beds" type="number" min="1" max="8" placeholder="2" required></label>
+            <label>Distance <input name="distance" placeholder="7 min walk"></label>
+            <label>Highlight badge <input name="badge" placeholder="New"></label>
+            <label>Amenities <input name="amenities" placeholder="Wi-Fi, Laundry, Balcony"></label>
+            <label>Description <textarea name="description" placeholder="What makes this place good for students?" required></textarea></label>
+            <button class="button button-primary" type="submit">Publish dorm</button>
+          </form>
+
+          <form class="panel form-card" id="roommateForm">
+            <h3>Post a roommate request</h3>
+            <label>Name <input name="name" placeholder="Sara K." required></label>
+            <label>School <input name="school" placeholder="LAU"></label>
+            <label>Budget <input name="budget" type="number" min="1" placeholder="250" required></label>
+            <label>Move-in date <input name="moveIn" type="date" required></label>
+            <label>Lifestyle <input name="lifestyle" placeholder="Clean, social, sleeps early" required></label>
+            <label>Ideal match <input name="match" placeholder="Okay with guests on weekends"></label>
+            <label>Bio <textarea name="bio" placeholder="Share what kind of roommate you're hoping to find." required></textarea></label>
+            <button class="button button-secondary" type="submit">Publish profile</button>
+          </form>
+        </div>
+
+        <p class="status-message" id="statusMessage" aria-live="polite"></p>
+      </section>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
