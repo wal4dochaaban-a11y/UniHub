@@ -9,33 +9,27 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class DormMateServer {
     private static final int PORT = 8080;
     private static final Path PUBLIC_DIR = Path.of("public");
+    private static final Path DB_PATH = Path.of(System.getenv().getOrDefault("UNIHUB_DB", "unihub.db"));
 
-    private final CopyOnWriteArrayList<DormListing> listings = new CopyOnWriteArrayList<>();
-    private final CopyOnWriteArrayList<RoommatePost> roommatePosts = new CopyOnWriteArrayList<>();
-    private final AtomicInteger listingIds = new AtomicInteger(1000);
-    private final AtomicInteger roommateIds = new AtomicInteger(2000);
+    private final UniHubDatabase database = new UniHubDatabase(DB_PATH);
 
     public static void main(String[] args) throws IOException {
         new DormMateServer().start();
     }
 
     private void start() throws IOException {
-        seedData();
+        database.initialize();
 
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
         server.createContext("/api/listings", this::handleListings);
@@ -44,7 +38,7 @@ public class DormMateServer {
         server.setExecutor(Executors.newFixedThreadPool(8));
         server.start();
 
-        System.out.println("DormMate is live at http://localhost:" + PORT);
+        System.out.println("UniHub is live at http://localhost:" + PORT);
     }
 
     private void handleListings(HttpExchange exchange) throws IOException {
@@ -56,10 +50,7 @@ public class DormMateServer {
         }
 
         if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-            List<DormListing> sorted = listings.stream()
-                .sorted(Comparator.comparingInt(DormListing::price))
-                .toList();
-            sendJson(exchange, 200, toListingsJson(sorted));
+            sendJson(exchange, 200, "{\"listings\":" + database.getListingsJson() + "}");
             return;
         }
 
@@ -68,24 +59,22 @@ public class DormMateServer {
                 Map<String, String> form = readForm(exchange);
                 String title = required(form, "title");
                 String campus = required(form, "campus");
-                String price = required(form, "price");
-                String beds = required(form, "beds");
+                int price = positiveInt(required(form, "price"), "price");
+                int beds = positiveInt(required(form, "beds"), "beds");
                 String description = required(form, "description");
 
-                DormListing listing = new DormListing(
-                    listingIds.incrementAndGet(),
+                String listingJson = database.createListing(
                     title,
                     campus,
-                    Integer.parseInt(price),
-                    Integer.parseInt(beds),
-                    form.getOrDefault("distance", "Walkable"),
-                    form.getOrDefault("badge", "New"),
-                    form.getOrDefault("amenities", "Wi-Fi, Study lounge, Laundry"),
+                    price,
+                    beds,
+                    optional(form, "distance", "Walkable"),
+                    optional(form, "badge", "New"),
+                    optional(form, "amenities", "Wi-Fi, Study lounge, Laundry"),
                     description
                 );
 
-                listings.add(0, listing);
-                sendJson(exchange, 201, "{\"status\":\"ok\",\"listing\":" + listing.toJson() + "}");
+                sendJson(exchange, 201, "{\"status\":\"ok\",\"listing\":" + listingJson + "}");
             } catch (IllegalArgumentException exception) {
                 sendJson(exchange, 400, "{\"error\":\"" + escape(exception.getMessage()) + "\"}");
             }
@@ -104,10 +93,7 @@ public class DormMateServer {
         }
 
         if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-            List<RoommatePost> sorted = roommatePosts.stream()
-                .sorted(Comparator.comparing(RoommatePost::moveInDate))
-                .toList();
-            sendJson(exchange, 200, toRoommatesJson(sorted));
+            sendJson(exchange, 200, "{\"roommates\":" + database.getRoommatesJson() + "}");
             return;
         }
 
@@ -115,24 +101,22 @@ public class DormMateServer {
             try {
                 Map<String, String> form = readForm(exchange);
                 String name = required(form, "name");
-                String budget = required(form, "budget");
-                String moveIn = required(form, "moveIn");
+                int budget = positiveInt(required(form, "budget"), "budget");
+                LocalDate moveIn = parseDate(required(form, "moveIn"), "moveIn");
                 String lifestyle = required(form, "lifestyle");
                 String bio = required(form, "bio");
 
-                RoommatePost post = new RoommatePost(
-                    roommateIds.incrementAndGet(),
+                String postJson = database.createRoommatePost(
                     name,
-                    form.getOrDefault("school", "Local Campus"),
-                    Integer.parseInt(budget),
-                    LocalDate.parse(moveIn),
+                    optional(form, "school", "Local Campus"),
+                    budget,
+                    moveIn,
                     lifestyle,
-                    form.getOrDefault("match", "Quiet evenings"),
+                    optional(form, "match", "Quiet evenings"),
                     bio
                 );
 
-                roommatePosts.add(0, post);
-                sendJson(exchange, 201, "{\"status\":\"ok\",\"post\":" + post.toJson() + "}");
+                sendJson(exchange, 201, "{\"status\":\"ok\",\"post\":" + postJson + "}");
             } catch (IllegalArgumentException exception) {
                 sendJson(exchange, 400, "{\"error\":\"" + escape(exception.getMessage()) + "\"}");
             }
@@ -140,20 +124,6 @@ public class DormMateServer {
         }
 
         sendJson(exchange, 405, "{\"error\":\"Method not allowed\"}");
-    }
-
-    private void seedData() {
-        listings.addAll(List.of(
-            new DormListing(901, "Sunlit Studio Loft", "Near AUB", 420, 1, "6 min walk", "Popular", "Wi-Fi, Balcony, Desk nook", "A bright studio for students who want privacy, storage, and a quick campus walk."),
-            new DormListing(902, "Shared Penthouse Floor", "Hamra District", 280, 2, "10 min bus", "Budget pick", "Laundry, Rooftop, Utilities included", "Split a stylish upper-floor unit with generous common space and a social vibe."),
-            new DormListing(903, "Focus House Suite", "Medical Campus", 360, 1, "3 min walk", "Quiet zone", "Study lounge, Generator, Security", "Designed for exam seasons with quiet hours, backup power, and easy late-night access.")
-        ));
-
-        roommatePosts.addAll(List.of(
-            new RoommatePost(1801, "Maya R.", "AUB", 300, LocalDate.now().plusDays(21), "Early riser, tidy, low-noise weekdays", "Looking for another student who likes clean shared kitchens and calm nights.", "Architecture student who cooks twice a week and wants a roommate who communicates clearly."),
-            new RoommatePost(1802, "Karim H.", "LAU", 250, LocalDate.now().plusDays(35), "Gym routine, social but respectful", "Best with someone who is okay with friends visiting occasionally and shared grocery runs.", "Computer science major hunting for a 2-bedroom setup near transit."),
-            new RoommatePost(1803, "Nour A.", "USJ", 340, LocalDate.now().plusDays(14), "Quiet, focused, loves routines", "Hoping to match with another postgraduate student who values personal space.", "Master's student who needs reliable internet, calm evenings, and a serious study environment.")
-        ));
     }
 
     private Map<String, String> readForm(HttpExchange exchange) throws IOException {
@@ -184,6 +154,27 @@ public class DormMateServer {
             throw new IllegalArgumentException("Missing field: " + key);
         }
         return value;
+    }
+
+    private String optional(Map<String, String> form, String key, String fallback) {
+        String value = form.getOrDefault(key, "").trim();
+        return value.isEmpty() ? fallback : value;
+    }
+
+    private int positiveInt(String value, String fieldName) {
+        int parsed = Integer.parseInt(value);
+        if (parsed <= 0) {
+            throw new IllegalArgumentException(fieldName + " must be greater than 0");
+        }
+        return parsed;
+    }
+
+    private LocalDate parseDate(String value, String fieldName) {
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException exception) {
+            throw new IllegalArgumentException(fieldName + " must use YYYY-MM-DD format");
+        }
     }
 
     private void sendJson(HttpExchange exchange, int status, String json) throws IOException {
@@ -227,26 +218,6 @@ public class DormMateServer {
         headers.set("Access-Control-Allow-Headers", "Content-Type");
     }
 
-    private String toListingsJson(List<DormListing> items) {
-        List<String> json = new ArrayList<>();
-        for (DormListing item : items) {
-            json.add(item.toJson());
-        }
-        return "{\"listings\":[" + String.join(",", json) + "]}";
-    }
-
-    private String toRoommatesJson(List<RoommatePost> items) {
-        List<String> json = new ArrayList<>();
-        for (RoommatePost item : items) {
-            json.add(item.toJson());
-        }
-        return "{\"roommates\":[" + String.join(",", json) + "]}";
-    }
-
-    private String jsonString(String value) {
-        return "\"" + escape(value) + "\"";
-    }
-
     private String escape(String value) {
         return value
             .replace("\\", "\\\\")
@@ -283,69 +254,208 @@ public class DormMateServer {
         }
     }
 
-    private record DormListing(
-        int id,
-        String title,
-        String campus,
-        int price,
-        int beds,
-        String distance,
-        String badge,
-        String amenities,
-        String description
-    ) {
-        String toJson() {
-            return "{"
-                + "\"id\":" + id + ","
-                + "\"title\":\"" + escape(title) + "\","
-                + "\"campus\":\"" + escape(campus) + "\","
-                + "\"price\":" + price + ","
-                + "\"beds\":" + beds + ","
-                + "\"distance\":\"" + escape(distance) + "\","
-                + "\"badge\":\"" + escape(badge) + "\","
-                + "\"amenities\":\"" + escape(amenities) + "\","
-                + "\"description\":\"" + escape(description) + "\""
-                + "}";
+    private static final class UniHubDatabase {
+        private final Path dbPath;
+        private final String sqliteCommand;
+
+        UniHubDatabase(Path dbPath) {
+            this.dbPath = dbPath;
+            this.sqliteCommand = System.getenv().getOrDefault("SQLITE_EXE", "sqlite3");
         }
 
-        private static String escape(String value) {
-            return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "");
-        }
-    }
+        void initialize() throws IOException {
+            runSql("""
+                PRAGMA foreign_keys = ON;
 
-    private record RoommatePost(
-        int id,
-        String name,
-        String school,
-        int budget,
-        LocalDate moveInDate,
-        String lifestyle,
-        String match,
-        String bio
-    ) {
-        String toJson() {
-            return "{"
-                + "\"id\":" + id + ","
-                + "\"name\":\"" + escape(name) + "\","
-                + "\"school\":\"" + escape(school) + "\","
-                + "\"budget\":" + budget + ","
-                + "\"moveInDate\":\"" + moveInDate + "\","
-                + "\"lifestyle\":\"" + escape(lifestyle) + "\","
-                + "\"match\":\"" + escape(match) + "\","
-                + "\"bio\":\"" + escape(bio) + "\""
-                + "}";
+                CREATE TABLE IF NOT EXISTS dorm_listings (
+                    id INTEGER PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    campus TEXT NOT NULL,
+                    price INTEGER NOT NULL CHECK (price > 0),
+                    beds INTEGER NOT NULL CHECK (beds > 0),
+                    distance TEXT NOT NULL,
+                    badge TEXT NOT NULL,
+                    amenities TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS roommate_posts (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    school TEXT NOT NULL,
+                    budget INTEGER NOT NULL CHECK (budget > 0),
+                    move_in_date TEXT NOT NULL,
+                    lifestyle TEXT NOT NULL,
+                    match_text TEXT NOT NULL,
+                    bio TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
+                """);
+            seedData();
         }
 
-        private static String escape(String value) {
-            return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "");
+        String getListingsJson() throws IOException {
+            return runSql("""
+                SELECT COALESCE(json_group_array(json_object(
+                    'id', id,
+                    'title', title,
+                    'campus', campus,
+                    'price', price,
+                    'beds', beds,
+                    'distance', distance,
+                    'badge', badge,
+                    'amenities', amenities,
+                    'description', description
+                )), '[]')
+                FROM (
+                    SELECT * FROM dorm_listings
+                    ORDER BY price ASC, id ASC
+                );
+                """);
+        }
+
+        String getRoommatesJson() throws IOException {
+            return runSql("""
+                SELECT COALESCE(json_group_array(json_object(
+                    'id', id,
+                    'name', name,
+                    'school', school,
+                    'budget', budget,
+                    'moveInDate', move_in_date,
+                    'lifestyle', lifestyle,
+                    'match', match_text,
+                    'bio', bio
+                )), '[]')
+                FROM (
+                    SELECT * FROM roommate_posts
+                    ORDER BY move_in_date ASC, id ASC
+                );
+                """);
+        }
+
+        String createListing(
+            String title,
+            String campus,
+            int price,
+            int beds,
+            String distance,
+            String badge,
+            String amenities,
+            String description
+        ) throws IOException {
+            return runSql("""
+                INSERT INTO dorm_listings (title, campus, price, beds, distance, badge, amenities, description)
+                VALUES (%s, %s, %d, %d, %s, %s, %s, %s);
+
+                SELECT json_object(
+                    'id', id,
+                    'title', title,
+                    'campus', campus,
+                    'price', price,
+                    'beds', beds,
+                    'distance', distance,
+                    'badge', badge,
+                    'amenities', amenities,
+                    'description', description
+                )
+                FROM dorm_listings
+                WHERE id = last_insert_rowid();
+                """.formatted(
+                    sqlText(title),
+                    sqlText(campus),
+                    price,
+                    beds,
+                    sqlText(distance),
+                    sqlText(badge),
+                    sqlText(amenities),
+                    sqlText(description)
+                ));
+        }
+
+        String createRoommatePost(
+            String name,
+            String school,
+            int budget,
+            LocalDate moveInDate,
+            String lifestyle,
+            String match,
+            String bio
+        ) throws IOException {
+            return runSql("""
+                INSERT INTO roommate_posts (name, school, budget, move_in_date, lifestyle, match_text, bio)
+                VALUES (%s, %s, %d, %s, %s, %s, %s);
+
+                SELECT json_object(
+                    'id', id,
+                    'name', name,
+                    'school', school,
+                    'budget', budget,
+                    'moveInDate', move_in_date,
+                    'lifestyle', lifestyle,
+                    'match', match_text,
+                    'bio', bio
+                )
+                FROM roommate_posts
+                WHERE id = last_insert_rowid();
+                """.formatted(
+                    sqlText(name),
+                    sqlText(school),
+                    budget,
+                    sqlText(moveInDate.toString()),
+                    sqlText(lifestyle),
+                    sqlText(match),
+                    sqlText(bio)
+                ));
+        }
+
+        private void seedData() throws IOException {
+            runSql("""
+                INSERT OR IGNORE INTO dorm_listings
+                    (id, title, campus, price, beds, distance, badge, amenities, description)
+                VALUES
+                    (901, 'Sunlit Studio Loft', 'Near AUB', 420, 1, '6 min walk', 'Popular', 'Wi-Fi, Balcony, Desk nook', 'A bright studio for students who want privacy, storage, and a quick campus walk.'),
+                    (902, 'Shared Penthouse Floor', 'Hamra District', 280, 2, '10 min bus', 'Budget pick', 'Laundry, Rooftop, Utilities included', 'Split a stylish upper-floor unit with generous common space and a social vibe.'),
+                    (903, 'Focus House Suite', 'Medical Campus', 360, 1, '3 min walk', 'Quiet zone', 'Study lounge, Generator, Security', 'Designed for exam seasons with quiet hours, backup power, and easy late-night access.');
+
+                INSERT OR IGNORE INTO roommate_posts
+                    (id, name, school, budget, move_in_date, lifestyle, match_text, bio)
+                VALUES
+                    (1801, 'Maya R.', 'AUB', 300, date('now', '+21 days'), 'Early riser, tidy, low-noise weekdays', 'Looking for another student who likes clean shared kitchens and calm nights.', 'Architecture student who cooks twice a week and wants a roommate who communicates clearly.'),
+                    (1802, 'Karim H.', 'LAU', 250, date('now', '+35 days'), 'Gym routine, social but respectful', 'Best with someone who is okay with friends visiting occasionally and shared grocery runs.', 'Computer science major hunting for a 2-bedroom setup near transit.'),
+                    (1803, 'Nour A.', 'USJ', 340, date('now', '+14 days'), 'Quiet, focused, loves routines', 'Hoping to match with another postgraduate student who values personal space.', 'Master''s student who needs reliable internet, calm evenings, and a serious study environment.');
+                """);
+        }
+
+        private String runSql(String sql) throws IOException {
+            Process process = new ProcessBuilder(sqliteCommand, "-batch", dbPath.toString())
+                .redirectErrorStream(true)
+                .start();
+
+            try (OutputStream input = process.getOutputStream()) {
+                input.write(sql.getBytes(StandardCharsets.UTF_8));
+            }
+
+            String output;
+            try (InputStream processOutput = process.getInputStream()) {
+                output = new String(processOutput.readAllBytes(), StandardCharsets.UTF_8).trim();
+            }
+
+            try {
+                int exitCode = process.waitFor();
+                if (exitCode != 0) {
+                    throw new IOException("SQLite command failed: " + output);
+                }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IOException("SQLite command was interrupted", exception);
+            }
+
+            return output.isBlank() ? "[]" : output;
+        }
+
+        private String sqlText(String value) {
+            return "'" + value.replace("'", "''").replace("\r", "").replace("\n", " ") + "'";
         }
     }
 }
